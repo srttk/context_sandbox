@@ -30,8 +30,11 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	go leak(done)
 
 	fmt.Fprint(w, "allow request.")
-	// print が終われば rootHandler を終了する
-	close(done)
+
+	select {
+	case <-time.After(3 * time.Second):
+		close(done)
+	}
 }
 
 func main() {
