@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,15 +8,13 @@ import (
 )
 
 // 終わらない処理
-func leak(ctx context.Context) {
-	child, cancel := context.WithCancel(ctx)
-	defer cancel()
+func leak(done <-chan struct{}) {
 	for {
 		time.Sleep(1 * time.Second)
 		fmt.Println("looping...")
 
 		select {
-		case <-child.Done():
+		case <-done:
 			fmt.Println("break loop.")
 			return
 		default:
@@ -27,20 +24,14 @@ func leak(ctx context.Context) {
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	// 親 context 作成
-	parent, cancel := context.WithTimeout(context.Background(), 3 * time.Second)
-	// 上記設定した時間が来たら cancel() を呼ぶ
-	defer cancel()
-
-	// ゾンビ goroutine に ctx を渡す
-	go leak(parent)
+	// プロセス終了を伝えるチャネルを作成
+	done := make(chan struct{})
+	// done を渡す
+	go leak(done)
 
 	fmt.Fprint(w, "allow request.")
-
-	select {
-	case <-parent.Done():
-		fmt.Println(parent.Err())
-	}
+	// print が終われば rootHandler を終了する
+	close(done)
 }
 
 func main() {
