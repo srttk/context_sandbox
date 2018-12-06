@@ -9,17 +9,24 @@ import (
 
 // 終わらない処理
 func leak(done <-chan struct{}) {
-	for {
-		time.Sleep(1 * time.Second)
-		fmt.Println("looping...")
-
-		select {
-		case <-done:
-			fmt.Println("canncel loop.")
-			return
-		default:
-			continue
-		}
+	//for {
+	//	time.Sleep(1 * time.Second)
+	//	fmt.Println("looping...")
+	//
+	//	select {
+	//	case <-done:
+	//		fmt.Println("canncel loop.")
+	//		return
+	//	default:
+	//		continue
+	//	}
+	//}
+	// と思ったら意外と早く終わってしまった
+	time.Sleep(2 * time.Second)
+	select {
+	case <-done:
+		fmt.Println("done process.")
+		return
 	}
 }
 
@@ -31,12 +38,16 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 3秒以上リークした場合のみdoneチャネルを通じてキャンセル処理をする
 	// 2秒以内で勝手に止まるのにわざわざ3秒待つのは無駄
-	go func(){
-		<-time.After(3 * time.Second)
-		close(done)
-	}()
+	//go func(){
+	//	<-time.After(3 * time.Second)
+	//	close(done)
+	//}()
 
 	fmt.Fprint(w, "allow request.")
+	select {
+	case <-time.After(3 * time.Second):
+		close(done)
+	}
 }
 
 func main() {
