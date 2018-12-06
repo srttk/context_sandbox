@@ -15,7 +15,7 @@ func leak(done <-chan struct{}) {
 
 		select {
 		case <-done:
-			fmt.Println("break loop.")
+			fmt.Println("canncel loop.")
 			return
 		default:
 			continue
@@ -29,12 +29,14 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	// done を渡す
 	go leak(done)
 
-	fmt.Fprint(w, "allow request.")
-
-	select {
-	case <-time.After(3 * time.Second):
+	// 3秒以上リークした場合のみdoneチャネルを通じてキャンセル処理をする
+	// 2秒以内で勝手に止まるのにわざわざ3秒待つのは無駄
+	go func(){
+		<-time.After(3 * time.Second)
 		close(done)
-	}
+	}()
+
+	fmt.Fprint(w, "allow request.")
 }
 
 func main() {
