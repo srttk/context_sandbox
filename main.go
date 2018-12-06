@@ -10,8 +10,7 @@ import (
 
 // 終わらない処理
 func leak(ctx context.Context) {
-	child, cancel := context.WithCancel(ctx)
-	defer cancel()
+	child, _ := context.WithCancel(ctx)
 	for {
 		time.Sleep(1 * time.Second)
 		fmt.Println("looping...")
