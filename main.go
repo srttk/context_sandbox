@@ -27,11 +27,8 @@ func leak(ctx context.Context) {
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	// WithDeadline 用の time.Timeを作成
-	// 現在時刻の3秒後を deadline に設定
-	deadline := time.Now().Add(3 * time.Second)
 	// 親 context 作成
-	parent, cancel := context.WithDeadline(context.Background(), deadline)
+	parent, cancel := context.WithTimeout(context.Background(), 3 * time.Second)
 	// 上記設定した時間が来たら cancel() を呼ぶ
 	defer cancel()
 
