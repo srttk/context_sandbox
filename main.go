@@ -7,52 +7,32 @@ import (
 	"time"
 )
 
-// 終わらない処理
-func leak(done <-chan struct{}) {
-	//for {
-	//	time.Sleep(1 * time.Second)
-	//	fmt.Println("looping...")
-	//
-	//	select {
-	//	case <-done:
-	//		fmt.Println("canncel loop.")
-	//		return
-	//	default:
-	//		continue
-	//	}
-	//}
-	// と思ったら意外と早く終わってしまった
-	time.Sleep(2 * time.Second)
-	select {
-	case <-done:
-		fmt.Println("done process.")
-		return
-	}
+func heavy(result chan<- string) {
+	// 5秒かかる
+	fmt.Println("process started.")
+	time.Sleep(5 * time.Second)
+	fmt.Println("process finished.")
+	// 処理が完了したらチャネルに値を送信する
+	result <- "process succeeded!"
 }
 
-func rootHandler(w http.ResponseWriter, r *http.Request) {
-	// プロセス終了を伝えるチャネルを作成
-	done := make(chan struct{})
-	// done を渡す
-	go leak(done)
+func handler(w http.ResponseWriter, r *http.Request) {
+	// 結果を受信するチャネル
+	result := make(chan string, 1)
+	// 重い処理を起動
+	go heavy(result)
 
-	// 3秒以上リークした場合のみdoneチャネルを通じてキャンセル処理をする
-	// 2秒以内で勝手に止まるのにわざわざ3秒待つのは無駄
-	//go func(){
-	//	<-time.After(3 * time.Second)
-	//	close(done)
-	//}()
+	// ...省略
 
-	fmt.Fprint(w, "allow request.")
 	select {
-	case <-time.After(3 * time.Second):
-		close(done)
+	case r := <-result:
+		fmt.Fprintf(w, "allow request. result: %v\n", r)
 	}
 }
 
 func main() {
 	mux := http.DefaultServeMux
-	mux.HandleFunc("/", rootHandler)
+	mux.HandleFunc("/", handler)
 	err := http.ListenAndServe(":8080", mux)
 	log.Fatal(err)
 }
